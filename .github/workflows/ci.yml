@@ -36,7 +36,7 @@ jobs:
     # Step 5: Wait for all health checks (Max 3 mins wait)
     - name: Wait for Services to be Ready
       timeout-minutes: 3
-      run: docker compose wait
+      run: docker compose wait redis db web worker
 
     # Step 6: Verify running containers
     - name: Check running containers

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 1. Reverse Proxy / Gateway
   nginx:
@@ -23,6 +21,11 @@ services:
     container_name: enterprise-web
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     networks:
       - frontend-net
       - backend-net
@@ -42,6 +45,11 @@ services:
     command: celery -A tasks.celery_app worker --loglevel=info
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A tasks.celery_app status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - backend-net
     depends_on:

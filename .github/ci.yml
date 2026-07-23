@@ -1,0 +1,46 @@
+name: Production Docker CI Pipeline
+
+# Trigger this workflow every time code is pushed to the 'main' branch
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build Docker Image & Run Tests
+    runs-on: ubuntu-latest 
+
+    steps:
+    # Step 1: Check out the repository code onto the runner server
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    # Step 2: Set up the Docker Buildx engine (enables advanced caching)
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    # Step 3: Build the images using Buildx cache backend
+
+    - name: Build Docker Compose Images
+      env:
+        DOCKER_BUILDKIT: 1
+      run: docker compose build
+
+    # Step 4: Start the application using Docker Compose
+    - name: Start Docker Compose
+      run: docker compose up -d
+
+    # Step 5: Wait for all health checks (Max 3 mins wait)
+    - name: Wait for Services to be Ready
+      timeout-minutes: 3
+      run: docker compose wait
+
+    # Step 6: Verify running containers
+    - name: Check running containers
+      run: |
+              docker compose ps
+              curl -X POST "http://localhost/trigger-job?name=DevOpsTest"
+

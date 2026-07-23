@@ -38,14 +38,14 @@ jobs:
       run: |
           echo "Checking web availability..."
           for i in {1..15}; do
-            if curl -f -X POST "http://localhost/trigger-job?name=CITestJob | grep -q "CITestJob"; then
-              echo "✅ Web is up and responding!"
+            if curl -f -X POST "http://localhost/trigger-job?name=CITestJob" | grep -q "CITestJob"; then
+              echo "Web is up and responding!"
               exit 0
             fi
             echo "Attempt $i: Web not ready yet. Retrying in 2s..."
             sleep 2
           done
-          echo "❌ Web failed to respond in time."
+          echo "Web failed to respond in time."
           docker compose logs
           exit 1
 

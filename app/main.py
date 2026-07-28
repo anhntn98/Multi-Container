@@ -1,6 +1,6 @@
 import os
 from fastapi import FastAPI, HTTPException, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from passlib.context import CryptContext
 import psycopg2
 from tasks import send_welcome_email, log_security_event
@@ -36,16 +36,22 @@ def setup_database():
         print("✅ Database table 'users' initialized successfully.")
     except Exception as e:
         print(f"❌ Error setting up database: {e}")
+        raise e
 
 # Request Schemas
 class RegisterSchema(BaseModel):
     username: str
-    email: EmailStr
+    email: str
     password: str
 
 class LoginSchema(BaseModel):
     username: str
     password: str
+
+#Default route for health check
+@app.get("/")
+def read_root():
+    return {"message": "health check OK", "status": "running"}
 
 # 1. REGISTER ENDPOINT
 @app.post("/signup", status_code=status.HTTP_201_CREATED)

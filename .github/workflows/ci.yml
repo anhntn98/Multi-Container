@@ -45,12 +45,14 @@ jobs:
         POSTGRES_USER: citestuser
         POSTGRES_PASSWORD: citestpassword123
         POSTGRES_DB: enterprise_db
-        REDIS_HOST: redis
+        REDIS_URL: redis://redis:6379/0
         DATABASE_URL: postgresql://citestuser:citestpassword123@db:5432/enterprise_db
       run: docker compose up -d
 
     # Step 6: Run pytest (conftest.py checks the URL, then test_auth.py runs)
     - name: Run Integration Tests
-      run: pytest tests/ -v
+      run: |
+        docker ps -a
+        pytest tests/ -v
 
   

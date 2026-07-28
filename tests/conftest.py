@@ -13,10 +13,23 @@ def client():
 
 @pytest.fixture(scope="session", autouse=True)
 def verify_url_is_up(client):
-    """Verifies the root URL is reachable before running any tests."""
-    try:
-        response = client.get("/")
-        assert response.status_code == 200, f"URL returned status code {response.status_code}"
-        print("\n✅ Main URL is reachable! Executing test suite...")
-    except Exception as e:
-        pytest.fail(f"❌ Target URL is not reachable: {e}")
+    """
+    Retries connecting to the main URL to allow backend services 
+    time to fully initialize inside Docker.
+    """
+    max_retries = 15
+    delay_seconds = 2
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = client.get("/")
+            if response.status_code == 200:
+                print(f"\n✅ Target URL responded with 200 OK on attempt {attempt}!")
+                return
+            print(f"⏳ Attempt {attempt}/{max_retries}: Got HTTP {response.status_code}, retrying...")
+        except httpx.RequestError as e:
+            print(f"⏳ Attempt {attempt}/{max_retries}: Connection failed ({e}), retrying...")
+
+        time.sleep(delay_seconds)
+
+    pytest.fail("❌ Target URL failed to return 200 OK within the timeout period (502/down).")

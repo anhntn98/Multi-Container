@@ -46,7 +46,10 @@ jobs:
     - name: Build Docker Compose Images
       env:
         DOCKER_BUILDKIT: 1
-      run: docker compose build
+      run: |
+        docker compose down -v
+        docker compose build
+
 
 
     # Step 7: Start the application using Docker Compose

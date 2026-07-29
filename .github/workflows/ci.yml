@@ -39,14 +39,17 @@ jobs:
         DOCKER_BUILDKIT: 1
       run: docker compose build
 
+    # Step 6: Dynamically create the .env file on the CI runner
+    - name: Create .env file for Docker Compose
+      run: |
+        echo "DATABASE_URL=postgresql://postgres:postgres_password@db:5432/enterprise_db" >> .env
+        echo "POSTGRES_USER=postgres" >> .env
+        echo "POSTGRES_PASSWORD=postgres_password" >> .env
+        echo "POSTGRES_DB=enterprise_db" >> .env
+        echo "REDIS_UR=redis://redis:6379/0" >> .env
+
     # Step 6: Start the application using Docker Compose
     - name: Start Docker Compose
-      env:
-        POSTGRES_USER: citestuser
-        POSTGRES_PASSWORD: citestpassword123
-        POSTGRES_DB: enterprise_db
-        REDIS_URL: redis://redis:6379/0
-        DATABASE_URL: postgresql://citestuser:citestpassword123@db:5432/enterprise_db
       run: docker compose up -d
 
     # Step 6: Run pytest (conftest.py checks the URL, then test_auth.py runs)

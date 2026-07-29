@@ -52,11 +52,12 @@ jobs:
     # Step 6: Run pytest (conftest.py checks the URL, then test_auth.py runs)
     - name: Run Integration Tests
       run: |
-        docker ps -a
-        echo "checking logs for enterprise-web container..."
-        docker logs enterprise-web
-        echo "checking logs for nginx container..."
-        docker logs enterprise-gateway
+          pytest -v tests/
+
+    # Print Docker logs IF the workflow fails
+    - name: Print Container Logs on Failure
+      if: failure()
+      run: docker compose logs
 
 
   

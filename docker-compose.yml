@@ -18,6 +18,7 @@ services:
     build:
       context: ./app
       dockerfile: Dockerfile
+    image: multi-container-web:latest
     container_name: enterprise-web
     env_file:
       - .env

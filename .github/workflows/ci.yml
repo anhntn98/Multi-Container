@@ -68,7 +68,7 @@ jobs:
         if: github.ref == 'refs/heads/master'
         uses: aws-actions/configure-aws-credentials@v5
         with:
-          role-to-assume: arn:aws:iam::803872867747:role/github-actions-ecr-role
+          role-to-assume: arn:aws:iam::803872867747:role/ecr-permission
           aws-region: ${{ env.AWS_REGION }}
 
       # 10. Login Docker to ECR

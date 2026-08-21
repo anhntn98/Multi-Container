@@ -92,7 +92,7 @@ services:
       - backend-net
     restart: always
 
-# Persistent Data Storage
+# Persistent Data Storage.
 volumes:
   postgres_data:
     driver: local

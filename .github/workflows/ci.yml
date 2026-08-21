@@ -65,7 +65,7 @@ jobs:
       # Only publish when code is actually pushed to master.
       # Pull requests only build + test.
       - name: Configure AWS Credentials
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/master'
         uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: arn:aws:iam::803872867747:role/github-actions-ecr-role
@@ -73,13 +73,13 @@ jobs:
 
       # 10. Login Docker to ECR
       - name: Login to Amazon ECR
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/master'
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       # 11. Tag the SAME tested image with Git commit SHA and push to ECR
       - name: Tag and Push Image to ECR
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/master'
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}

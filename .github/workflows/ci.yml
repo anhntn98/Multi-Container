@@ -16,6 +16,7 @@ env:
   AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
 
   ECR_REPOSITORY_URL: ${{ vars.ECR_REPOSITORY_URL }}
+  ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
 
 jobs:
   build-and-test:

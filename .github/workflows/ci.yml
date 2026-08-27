@@ -21,6 +21,7 @@ jobs:
   build-and-test:
     name: Build Docker Image & Run Tests
     runs-on: ubuntu-latest
+    environment: devops
 
     steps:
       # 1. Checkout source code
@@ -116,6 +117,7 @@ jobs:
   deploy:
     name: Deploy to EC2
     needs: build-and-test
+    environment: devops
 
     if: github.ref == 'refs/heads/master'
 

@@ -12,8 +12,10 @@ permissions:
   id-token: write
 
 env:
-  AWS_REGION: ap-southeast-1
-  ECR_REPOSITORY: devops-lab-app
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+
+  ECR_REPOSITORY_URL: ${{ vars.ECR_REPOSITORY_URL }}
 
 jobs:
   build-and-test:
@@ -96,16 +98,128 @@ jobs:
       - name: Tag and Push Image to ECR
         if: github.ref == 'refs/heads/master'
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker tag multi-container-web:latest \
-            $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+            $ECR_REPOSITORY_URL:$IMAGE_TAG
 
           docker push \
-            $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+            $ECR_REPOSITORY_URL:$IMAGE_TAG
 
       # 12. Cleanup CI containers
       - name: Cleanup Docker Compose
         if: always()
         run: docker compose down -v
+
+
+### CD
+  deploy:
+    name: Deploy to EC2
+    needs: build-and-test
+
+    if: github.ref == 'refs/heads/master'
+
+    runs-on: ubuntu-latest
+
+    env:
+
+      EC2_INSTANCE_1: ${{ vars.EC2_INSTANCE_1 }}
+      EC2_INSTANCE_2: ${{ vars.EC2_INSTANCE_2 }}
+
+      # Same SHA that CI pushed to ECR
+      IMAGE_TAG: ${{ github.sha }}
+
+    steps:
+
+      # =====================================================
+      # 1. Authenticate GitHub Actions to AWS using OIDC
+      # =====================================================
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # =====================================================
+      # 2. Deploy EC2 #1
+      # =====================================================
+      - name: Deploy EC2 #1
+        id: deploy_ec2_1
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "$EC2_INSTANCE_1" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy $IMAGE_TAG to EC2 #1" \
+            --parameters commands="[
+              \"cd /opt/myproject\",
+              \"aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY\",
+              \"sed -i 's|^ECR_IMAGE=.*|ECR_IMAGE=$ECR_REPOSITORY_URL:$IMAGE_TAG|' .env\",
+              \"docker compose pull\",
+              \"docker compose up -d\",
+              \"sleep 10\",
+              \"curl -f http://localhost:8000\"
+            ]" \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
+
+      # =====================================================
+      # 3. Wait for EC2 #1 and verify deployment
+      # =====================================================
+      - name: Verify EC2 #1
+        run: |
+          aws ssm wait command-executed \
+            --command-id "${{ steps.deploy_ec2_1.outputs.command_id }}" \
+            --instance-id "$EC2_INSTANCE_1"
+
+          aws ssm get-command-invocation \
+            --command-id "${{ steps.deploy_ec2_1.outputs.command_id }}" \
+            --instance-id "$EC2_INSTANCE_1"
+
+      # =====================================================
+      # 4. Deploy EC2 #2
+      # =====================================================
+      - name: Deploy EC2 #2
+        id: deploy_ec2_2
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "$EC2_INSTANCE_2" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy $IMAGE_TAG to EC2 #2" \
+            --parameters commands="[
+              \"cd /opt/myproject\",
+              \"aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY\",
+              \"sed -i 's|^ECR_IMAGE=.*|ECR_IMAGE=$ECR_REPOSITORY_URL:$IMAGE_TAG|' .env\",
+              \"docker compose pull\",
+              \"docker compose up -d\",
+              \"sleep 10\",
+              \"curl -f http://localhost:8000\"
+            ]" \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
+
+      # =====================================================
+      # 5. Wait for EC2 #2 and verify deployment
+      # =====================================================
+      - name: Verify EC2 #2
+        run: |
+          aws ssm wait command-executed \
+            --command-id "${{ steps.deploy_ec2_2.outputs.command_id }}" \
+            --instance-id "$EC2_INSTANCE_2"
+
+          aws ssm get-command-invocation \
+            --command-id "${{ steps.deploy_ec2_2.outputs.command_id }}" \
+            --instance-id "$EC2_INSTANCE_2"
+
+      # =====================================================
+      # 6. Deployment result
+      # =====================================================
+      - name: Deployment Summary
+        run: |
+          echo "Deployment successful"
+          echo "Image: $ECR_REPOSITORY_URL:$IMAGE_TAG"
+          echo "EC2 #1: $EC2_INSTANCE_1"
+          echo "EC2 #2: $EC2_INSTANCE_2"

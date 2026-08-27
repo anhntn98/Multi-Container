@@ -1,0 +1,5 @@
+ubuntu_ami_id = "ami-0532913178263be11"
+
+ecr_repository_url = "803872867747.dkr.ecr.ap-southeast-1.amazonaws.com/devops-lab-app"
+
+db_password = "WWyg2jndhfgu"
